@@ -21,7 +21,6 @@ CFLAGS=\
 	/Ox\
 	/W4\
 	/Zi\
-	/EHsc\
 	/Fo"$(OBJDIR)\\"\
 	/Fd"$(OBJDIR)\\"\
 
