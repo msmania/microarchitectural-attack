@@ -6,12 +6,12 @@ global memory_access
 section .text
 
 branch_predictor:
-  cmp ecx, dword [r8]
+  cmp rcx, [r8]
   jae .skip_access
 
-  movzx eax, byte [rdx + rcx]
+  movzx rax, byte [rdx + rcx]
   shl rax, 0Ch
-  movzx eax, byte [r9 + rax]
+  mov al, byte [r9 + rax]
 
 .skip_access:
   ret

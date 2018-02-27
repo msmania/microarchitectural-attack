@@ -3,16 +3,14 @@ BITS 64
 global ooe
 global memory_access
 
-extern probe
-extern zero
-
 section .text
 
 ooe:
-  div dword [zero]
+  mov r9, rdx
+  div dword [r8]
   movzx rax, byte [rcx]
   shl rax, 0Ch
-  mov al, byte [probe + rax]
+  mov al, byte [r9 + rax]
   ret
 
 memory_access:
