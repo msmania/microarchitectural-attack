@@ -64,16 +64,20 @@ trial#118: guess=42 (score=72)
 
 ### PoC #2: Toy example of Spectre
 
-This PoC demonstrates the 'Conditional Branch Misprediction' in the [Spectre paper](https://arxiv.org/abs/1801.01203).  The paper also includes the example implementation in C as Appendix A.  I could simplify that example a lot by using assembly language.
+This PoC demonstrates two variants presented in the [Spectre paper](https://arxiv.org/abs/1801.01203): '4. Exploiting Conditional Branch Misprediction' and '5. Poisoning Indirect Branches'.
 
-The program proves that CPU predicts a condition based on the previous results, and runs a branch speculatively when the result of that condition is still uncertain.
+The first variant 'Exploiting Conditional Branch Misprediction' proves that CPU predicts a condition based on the previous results, and runs a branch speculatively when the result of that condition is still uncertain.  The paper also includes the example implementation of this variant in C as Appendix A.  I could simplify that example a lot by using assembly language.
+
+The second variant 'Poisoning Indirect Branches' proves that CPU predicts the destination address of an indirect jump instruction based on the previous results.  This PoC uses `call [rax]` to demonstrate the indirect jump.  You can observe the processor speculatively runs the code at the previous jump destination while fetching a real destination from the address stored in the register `rax`.
+
+In both variants, an attacker can *train* the branch predictor to cause the processor to mispredict a branch to the address which the attacker wants to run.
 
 #### Run & Output
 
-Run `branch.exe`.  The output is the same as Meltdown's toy example.
+Run `branch.exe --variant1` for Conditional Branch Misprediction or `branch.exe --variant2` for Poisoning Indirect Branches.  The output is the same as Meltdown's toy example.
 
 ```
-> bin\amd64\branch.exe
+> bin\amd64\branch.exe --variant1
 trial#0: guess='A' (score=78)
     27   267   264   261   291   330   264   297   258   261   255   255   300   222   225   294
    264   264   258   297   291   264   303   264   261   261   297   228   225   303   261   303
