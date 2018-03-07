@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
                               ProbingThread,
                               &results[i * read_count],
                               CREATE_SUSPENDED,
-                              &tid),
+                              &tid);
     SetThreadAffinityMask(threads[i], 1i64 << i);
     printf("running tid:%04x for core#%d\n", tid, i);
     ResumeThread(threads[i]);
