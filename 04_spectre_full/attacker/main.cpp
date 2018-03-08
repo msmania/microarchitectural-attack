@@ -29,7 +29,7 @@ DWORD WINAPI ProbingThread(LPVOID) {
         _mm_clflush(&probe[i * 4096]);
 
       // Delay the operation to give the victim thread time to speculatively
-      // executed a mispredicted branch.  Timing window is very tight.
+      // execute a mispredicted branch.  Timing window is very tight.
       // I tried Sleep or system calls as well, but the following simple loop
       // gives relatively better success rate though it's still low.
       for (volatile int z = 0; z < 1000000; ++z);
