@@ -1,0 +1,5 @@
+LIBRARY "gadget.dll"
+EXPORTS
+  LoadGadget
+  IndirectCall
+  Touch

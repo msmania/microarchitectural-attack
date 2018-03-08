@@ -1,6 +1,6 @@
 # Meltdown/Spectre Proof-of-Concept for Windows
 
-This repository contains PoC codes to demonstrate the famous Meltdown/Spectre vulnerability.
+This repository contains PoC codes to demonstrate the famous Meltdown/Spectre vulnerability.  Hopefully this becomes a good start to explore the wonderful world of microarchitectural attacks for you!
 
 ## Software requirements to build
 
@@ -153,6 +153,66 @@ core#7:  00 00 00 00
 ```
 
 This PoC is not as stable as the toy examples described earlier.  The actual kernel bytes start with '41 63 73 77'.  You can see the thread running on core#0 got three of them, and core#1 got one.  It's not 100% accurate, but obviously we're seeing data that we should not be able to see.  Success rate depends on CPU, and some parameters hardcoded in the attacker's code.  For example, you may need to increase the value of `max_trial` in `meltdown_full`.
+
+### PoC #4: Cross-process Branch Target Injection (Spectre Variant 2)
+
+This PoC demonstrates a cross-process scenario of the 2nd variant of Spectre while `branch.exe --variant2`of PoC #2 demonstrates a single-process scenario.  The concept to prove here is that the execution of an indirect branch instruction in one process can influence branch prediction in another process, resulting in a speculative execution of a gadget that is chosen by an attacker.  Moreover, the attacker can retrieve the result of victim's speculative execution via Flush+Reload in the attacker's context.
+
+#### Run & Output (Flush+Reload in Victim process)
+
+First, start the victim process by running `spectre.exe --victim --probe`.  The 2nd option `--probe` means we run Flush+Reload in the victim process.  You'll see an output like this:
+
+```
+> spectre.exe --victim --probe
+Starting the victim thread with probing on cpu#1...
+```
+
+Now the victim process is continuously executing a indirect branch instruction in a loop.  You can influence this victim process by starting a new process.  Open a new command prompt and run the command `spectre.exe --train`.  The second process continuously executes an indirect branch instruction located at the same virtual address as in the victim process, but the destination address is cracked in the attacker process.
+
+```
+> spectre.exe --train
+Starting the training thread on cpu#1...
+```
+
+When you go back to the first command prompt where the victim is running, you'll see an output like this:
+
+```
+> spectre.exe --victim --probe
+Starting the victim thread with probing on cpu#1...
+
+trial#10209: guess='A' (=41) (score=70)
+trial#1: guess='A' (=41) (score=46)
+trial#0: guess='A' (=41) (score=36)
+trial#1: guess='A' (=41) (score=47)
+trial#1: guess='A' (=41) (score=43)
+...
+```
+
+This means the second process successfully caused the first process to run a gadget speculatively, and Flush+Reload caught its result in the victim process.  If you terminate the second training process and restart it with the same command again, you'll see speculative execution happens only while the training process is running.
+
+#### Run & Output (Flush+Reload in Attacker process)
+
+The previous Run & Output proves cross-process branch target injection indeed happens, but it's not very interesting because the attacker could not get the result of speculative execution.  Let's see it's possible that the victim's speculative execution induced by the attacker influences back the attacker's Flush+Reload.
+
+Start the victim process by running `spectre.exe --victim`.  Without `--probe`, the victim process does not run Flush+Reload.
+
+```
+> spectre.exe --victim
+Starting the victim thread on cpu#1...
+```
+
+Start a new command prompt and start the training process with the option `--probe`.  If Flush+Reload at the attacker succeeds, you'll see an output like this:
+
+```
+> spectre.exe --train --probe
+Starting the training thread on cpu#1...
+Starting the probing thread on cpu#2...
+trial#1565: guess='A' (=41) (score=97)
+trial#12636: guess='A' (=41) (score=60)
+trial#1037: guess='A' (=41) (score=82)
+```
+
+Unfortunately success rate of this scenario is bad, and it varies depending on CPU and other processes running on the system.  In the worst case, you may need to wait a couple of minutes until a first result.
 
 ## \*Warning\*
 
