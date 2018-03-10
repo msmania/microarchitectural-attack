@@ -167,7 +167,7 @@ First, start the victim process by running `spectre.exe --victim --probe`.  The 
 Starting the victim thread with probing on cpu#1...
 ```
 
-Now the victim process is continuously executing a indirect branch instruction in a loop.  You can influence this victim process by starting a new process.  Open a new command prompt and run the command `spectre.exe --train`.  The second process continuously executes an indirect branch instruction located at the same virtual address as in the victim process, but the destination address is cracked in the attacker process.
+Now the victim process is continuously executing an indirect branch instruction in a loop.  You can influence this victim process by starting a new process.  Open a new command prompt and run the command `spectre.exe --train`.  The second process continuously executes an indirect branch instruction located at the same virtual address as in the victim process, but the destination address is cracked in the attacker process.
 
 ```
 > spectre.exe --train
