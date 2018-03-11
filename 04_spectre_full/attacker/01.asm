@@ -1,5 +1,6 @@
 global memory_access
 global flush_reload
+global evict
 
 section .text
 
@@ -36,4 +37,11 @@ flush_reload:
 
   sub rax,r8
   clflush [r9]
+  ret
+
+evict:
+  mov al, byte [rcx]
+  add rcx, r8
+  dec edx
+  jnz evict
   ret

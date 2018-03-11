@@ -72,7 +72,7 @@ $(OUTDIR)\$(CONTROLLER): $(OBJS_CONTROLLER)
 
 $(OUTDIR)\$(DRIVER): $(OBJS_DRIVER)
 	@if not exist $(OUTDIR) mkdir $(OUTDIR)
-	$(LINKER) $(LFLAGS_DRIVER) $(LIBS_DRIVER) /PDB:"$(@R).pdb" /IMPLIB:"$(@R).lib" /OUT:$@ $**
+	$(LINKER) $(LFLAGS_DRIVER) $(LIBS_DRIVER) /PDB:"$(@R)_driver.pdb" /IMPLIB:"$(@R).lib" /OUT:$@ $**
 	$(SIGNTOOL) sign /ph /sha1 $(CODESIGN_SHA1) $@
 
 {attacker}.cpp{attacker\$(OBJDIR)}.obj:
